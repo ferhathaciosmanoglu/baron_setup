@@ -23,4 +23,4 @@ jobs:
         run: npm install
 
       - name: Build BARON
-        run: npm run tauri build
+        run: npx tauri build

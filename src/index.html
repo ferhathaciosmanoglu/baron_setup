@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>BARON Güncelleme</title>
+  <style>
+    *{box-sizing:border-box}html,body{height:100%;margin:0;font-family:Segoe UI,Arial,sans-serif;background:#08111f;color:#f7f9fc}body{display:grid;place-items:center;background:radial-gradient(circle at 20% 10%,#182c4b 0,transparent 34%),linear-gradient(145deg,#08111f,#0d1a2e)}
+    .box{width:min(610px,calc(100% - 32px));padding:38px;border:1px solid rgba(255,255,255,.09);border-radius:26px;background:rgba(11,24,42,.92);box-shadow:0 28px 90px rgba(0,0,0,.45)}
+    .top{display:flex;gap:20px;align-items:center}.logo{width:86px;height:86px;flex:0 0 86px;border-radius:23px;display:grid;place-items:center;background:linear-gradient(145deg,#c99625,#f0cf6b);color:#0b1324;font-size:46px;font-weight:900;box-shadow:0 18px 42px rgba(201,150,37,.2)}
+    h1{font-size:28px;margin:0 0 7px}.muted{color:#aebbd0;margin:0;line-height:1.6}.version{display:inline-block;margin-top:12px;padding:6px 10px;border-radius:999px;background:#172944;color:#f0cf6b;font-weight:700;font-size:13px}
+    .panel{margin-top:26px;padding:22px;border-radius:18px;background:#0d1b30;border:1px solid rgba(255,255,255,.07)}.notes{white-space:pre-wrap;max-height:145px;overflow:auto;color:#cbd5e1;line-height:1.55;font-size:14px;margin:12px 0 0}
+    .progress{height:11px;border-radius:999px;background:#1e304b;overflow:hidden;margin-top:18px;display:none}.bar{height:100%;width:0;background:linear-gradient(90deg,#d6a633,#f1d06d);transition:width .2s}.progress-text{margin-top:9px;color:#aebbd0;font-size:13px;display:none}
+    .actions{display:flex;gap:12px;justify-content:flex-end;margin-top:22px;flex-wrap:wrap}button{border:0;border-radius:12px;padding:13px 18px;font-weight:800;cursor:pointer;font-size:14px}.primary{background:#e2b84c;color:#0b1324}.secondary{background:#1a2c47;color:#e6edf7}.hidden{display:none!important}.error{color:#ffaaaa}.ok{color:#8de5b0}
+  </style>
+</head>
+<body>
+  <main class="box">
+    <div class="top">
+      <div class="logo">B</div>
+      <div>
+        <h1 id="title">BARON güncellemeleri kontrol ediyor</h1>
+        <p class="muted" id="message">En yeni sürüm güvenli imza ile doğrulanıyor.</p>
+        <span class="version" id="versionBadge">BARON v1.2.0</span>
+      </div>
+    </div>
+
+    <section class="panel" id="updatePanel">
+      <strong id="panelTitle">Lütfen bekleyin…</strong>
+      <div class="notes" id="notes">GitHub Releases bağlantısı kontrol ediliyor.</div>
+      <div class="progress" id="progress"><div class="bar" id="bar"></div></div>
+      <div class="progress-text" id="progressText">İndiriliyor…</div>
+    </section>
+
+    <div class="actions">
+      <button class="secondary hidden" id="laterBtn">Daha Sonra</button>
+      <button class="secondary hidden" id="retryBtn">Tekrar Kontrol Et</button>
+      <button class="primary hidden" id="updateBtn">Şimdi Güncelle</button>
+      <button class="primary hidden" id="openBtn">BARON'u Aç</button>
+    </div>
+  </main>
+
+  <script>
+    const BARON_URL = "https://baron-ef2e6.web.app";
+    const manual = new URLSearchParams(location.search).get("manual") === "1";
+    const $ = id => document.getElementById(id);
+    const invoke = window.__TAURI__?.core?.invoke;
+    const Channel = window.__TAURI__?.core?.Channel;
+
+    function openBaron(){ window.location.replace(BARON_URL); }
+    function setError(message){
+      $('title').textContent='Güncelleme kontrol edilemedi';
+      $('message').textContent='İnternet bağlantısını kontrol edip tekrar deneyin.';
+      $('notes').textContent=String(message || 'Bilinmeyen hata');
+      $('notes').className='notes error';
+      $('retryBtn').classList.remove('hidden');
+      $('openBtn').classList.remove('hidden');
+    }
+
+    async function checkUpdate(){
+      $('retryBtn').classList.add('hidden'); $('openBtn').classList.add('hidden');
+      $('title').textContent='BARON güncellemeleri kontrol ediyor';
+      $('message').textContent='En yeni sürüm güvenli imza ile doğrulanıyor.';
+      $('notes').className='notes'; $('notes').textContent='GitHub Releases bağlantısı kontrol ediliyor.';
+      try{
+        if(!invoke) throw new Error('Tauri güncelleme köprüsü bulunamadı.');
+        const update=await invoke('check_for_update');
+        if(!update){
+          $('title').textContent='BARON güncel';
+          $('message').textContent='Bilgisayarınızda en yeni sürüm yüklü.';
+          $('panelTitle').textContent='Güncelleme bulunamadı';
+          $('notes').textContent='Mevcut BARON sürümünüz güncel.';
+          $('notes').className='notes ok';
+          $('openBtn').classList.remove('hidden');
+          if(!manual) setTimeout(openBaron,900);
+          return;
+        }
+        $('title').textContent=`BARON ${update.version} hazır`;
+        $('message').textContent=`Mevcut sürüm ${update.currentVersion}. Yeni sürümü şimdi kurabilirsiniz.`;
+        $('versionBadge').textContent=`Yeni sürüm v${update.version}`;
+        $('panelTitle').textContent='Yenilikler';
+        $('notes').textContent=update.notes || 'Performans iyileştirmeleri ve hata düzeltmeleri.';
+        $('laterBtn').classList.remove('hidden');
+        $('updateBtn').classList.remove('hidden');
+      }catch(error){ setError(error); }
+    }
+
+    async function installUpdate(){
+      $('laterBtn').classList.add('hidden'); $('updateBtn').disabled=true;
+      $('updateBtn').textContent='Güncelleniyor…'; $('progress').style.display='block'; $('progressText').style.display='block';
+      let downloaded=0,total=0;
+      try{
+        const channel=new Channel();
+        channel.onmessage=(event)=>{
+          if(event.event==='Started'){ total=event.data.contentLength || 0; $('progressText').textContent='İndirme başladı…'; }
+          if(event.event==='Progress'){
+            downloaded += event.data.chunkLength;
+            if(total){ const pct=Math.min(100,Math.round(downloaded/total*100)); $('bar').style.width=pct+'%'; $('progressText').textContent=`İndiriliyor: %${pct}`; }
+            else $('progressText').textContent=`İndiriliyor: ${(downloaded/1024/1024).toFixed(1)} MB`;
+          }
+          if(event.event==='Finished'){ $('bar').style.width='100%'; $('progressText').textContent='Kurulum başlatılıyor…'; }
+        };
+        await invoke('install_pending_update',{onEvent:channel});
+      }catch(error){ $('updateBtn').disabled=false; $('updateBtn').textContent='Tekrar Güncelle'; setError(error); }
+    }
+
+    $('updateBtn').onclick=installUpdate;
+    $('laterBtn').onclick=openBaron;
+    $('openBtn').onclick=openBaron;
+    $('retryBtn').onclick=checkUpdate;
+    window.addEventListener('DOMContentLoaded',()=>setTimeout(checkUpdate,450));
+  </script>
+</body>
+</html>

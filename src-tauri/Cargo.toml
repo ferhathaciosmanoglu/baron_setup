@@ -1,0 +1,23 @@
+[package]
+name = "baron"
+version = "1.2.0"
+description = "BARON Ders Programı Yönetim Sistemi"
+authors = ["BARON"]
+edition = "2021"
+
+[lib]
+name = "baron_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-notification = "2"
+tauri-plugin-window-state = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+tauri-plugin-updater = "2"
+thiserror = "2"

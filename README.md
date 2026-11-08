@@ -49,7 +49,7 @@ git push origin v1.2.0
 
 GitHub Actions otomatik Release oluşturur. Uygulamalar şu endpoint'i kontrol eder:
 
-`https://github.com/F6RH1T/baron_setup/releases/latest/download/latest.json`
+`https://github.com/ferhathaciosmanoglu/baron_setup/releases/latest/download/latest.json`
 
 ## Güvenlik
 
